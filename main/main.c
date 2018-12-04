@@ -19,7 +19,8 @@
 #include "bmx280.h"
 
 static const char *TAG = "VVNX";
-char adv_temp[5] = "xxxxx";
+uint8_t temp_intpart = 99; //valeur par défaut -> 63 en hex
+uint8_t temp_decpart = 99; //valeur par défaut -> 63 en hex
 
 /*
  * Bluetooth
@@ -180,17 +181,24 @@ static void hci_cmd_send_ble_set_adv_param(void)
 
 static void hci_cmd_send_ble_set_adv_data(void)
 {
-    printf("La temperature qu'on va advertiser ----------> %s\n", adv_temp);
-    uint8_t name_len = (uint8_t)strlen(adv_temp);
-    uint8_t adv_data[31] = {0x02, 0x01, 0x06, 0x0, 0x09};
-    uint8_t adv_data_len;
+    printf("La temperature qu'on va advertiser ----------> %i.%i\n", temp_intpart, temp_decpart);
 
-    adv_data[3] = name_len + 1;
+    uint8_t adv_data[31] = {0x02, 0x01, 0x06};
+    uint8_t adv_data_len;
+    
+
+
+    /*adv_data[3] = name_len + 1;
     for (int i = 0; i < name_len; i++) {
         adv_data[5 + i] = (uint8_t)adv_temp[i];
     }
-    adv_data_len = 5 + name_len;
-
+    adv_data_len = 5 + name_len;*/
+    
+    adv_data[3] = 2;
+    adv_data[4] = temp_intpart; //arrive en hexa de l'autre côté (hexa c'est la forme d'affichage, en fait c'est un int tout le long)
+    adv_data[5] = temp_decpart; //arrive en hexa de l'autre côté (hexa c'est la forme d'affichage, en fait c'est un int tout le long)
+    adv_data_len = 6;
+    
     uint16_t sz = make_cmd_ble_set_adv_data(hci_cmd_buf, adv_data_len, (uint8_t *)adv_data);
     esp_vhci_host_send_packet(hci_cmd_buf, sz);
 }
@@ -240,8 +248,11 @@ static void env_sensor_callback(env_data_t* env_data) {
 		r->timestamp = oap_epoch_sec();
 		memcpy(&last_env_data->env_data, env_data, sizeof(env_data_t));
 		
-		sprintf(adv_temp,"%.2f",env_data->temp);
-		
+		//sprintf(adv_temp,"%.2f",env_data->temp); //avant je faisait ça
+		//https://stackoverflow.com/questions/499939/extract-decimal-part-from-a-floating-point-number-in-c
+		temp_intpart = (int)env_data->temp;
+		temp_decpart = ((int)(env_data->temp*100)%100);
+
 		
 		
 	} else {
