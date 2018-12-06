@@ -8,6 +8,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <math.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_bt.h"
@@ -21,6 +22,7 @@
 static const char *TAG = "VVNX";
 uint8_t temp_intpart = 99; //valeur par défaut -> 63 en hex
 uint8_t temp_decpart = 99; //valeur par défaut -> 63 en hex
+bool temp_pos = true; //si la température est positive true si neg false
 
 /*
  * Bluetooth
@@ -181,7 +183,7 @@ static void hci_cmd_send_ble_set_adv_param(void)
 
 static void hci_cmd_send_ble_set_adv_data(void)
 {
-    printf("La temperature qu'on va advertiser ----------> %i.%i\n", temp_intpart, temp_decpart);
+
 
     uint8_t adv_data[31] = {0x02, 0x01, 0x06};
     uint8_t adv_data_len;
@@ -194,10 +196,14 @@ static void hci_cmd_send_ble_set_adv_data(void)
     }
     adv_data_len = 5 + name_len;*/
     
-    adv_data[3] = 2;
-    adv_data[4] = temp_intpart; //arrive en hexa de l'autre côté (hexa c'est la forme d'affichage, en fait c'est un int tout le long)
-    adv_data[5] = temp_decpart; //arrive en hexa de l'autre côté (hexa c'est la forme d'affichage, en fait c'est un int tout le long)
-    adv_data_len = 6;
+    adv_data[3] = 3; //taille de la partie température: un byte pour temp_pos (true si temperature positive false otherwise, et partie avant virgule, et partie après virgule
+    if (temp_pos == true) adv_data[4] = 1; else adv_data[4] = 0;
+    adv_data[5] = temp_intpart; //arrive en hexa de l'autre côté (hexa c'est la forme d'affichage, en fait c'est un int tout le long)
+    adv_data[6] = temp_decpart; //arrive en hexa de l'autre côté (hexa c'est la forme d'affichage, en fait c'est un int tout le long)
+    adv_data_len = 7;
+    
+    printf("Les champs température que l'on va advertiser ---------->temp_pos:%i et temp: %i.%i\n",adv_data[4], temp_intpart, temp_decpart);
+
     
     uint16_t sz = make_cmd_ble_set_adv_data(hci_cmd_buf, adv_data_len, (uint8_t *)adv_data);
     esp_vhci_host_send_packet(hci_cmd_buf, sz);
@@ -249,11 +255,13 @@ static void env_sensor_callback(env_data_t* env_data) {
 		memcpy(&last_env_data->env_data, env_data, sizeof(env_data_t));
 		
 		//sprintf(adv_temp,"%.2f",env_data->temp); //avant je faisait ça
+		//env_data_t défini dans oap_data_env.h -> temp est un double
 		//https://stackoverflow.com/questions/499939/extract-decimal-part-from-a-floating-point-number-in-c
-		temp_intpart = (int)env_data->temp;
-		temp_decpart = ((int)(env_data->temp*100)%100);
-
 		
+		//double essai_temp_neg = -4.18; //pour faire des essais de temperature fictive
+		if (env_data->temp < 0) temp_pos = false;
+		temp_intpart = (int)fabs(env_data->temp); //fabs = valeur absolue d'un double (gestion des temps negs)
+		temp_decpart = ((int)(fabs(env_data->temp)*100)%100);
 		
 	} else {
 		ESP_LOGE(TAG, "env (%d) - invalid sensor", env_data->sensor_idx);
@@ -320,7 +328,7 @@ void app_main()
     ESP_LOGI(TAG, "on advertise 10 secondes");
     vTaskDelay(10000 / portTICK_PERIOD_MS);
     ESP_LOGI(TAG, "fin... on se revoit après un dodo bien mérité...");
-    esp_sleep_enable_timer_wakeup(20 * 1000000);
+    esp_sleep_enable_timer_wakeup(5 * 1000000);
 	esp_deep_sleep_start();
 }
 
