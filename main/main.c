@@ -160,8 +160,8 @@ static void hci_cmd_send_ble_adv_start(void)
 
 static void hci_cmd_send_ble_set_adv_param(void)
 {
-    uint16_t adv_intv_min = 256; // 160ms
-    uint16_t adv_intv_max = 256; // 160ms
+    uint16_t adv_intv_min = 256; // usine: 256 - 160ms (bt core specs p. 1252) 256 * 0.625 ms, essayé 2048 ça passe aussi
+    uint16_t adv_intv_max = 256; // usine: 256 - 160ms
     uint8_t adv_type = 0; // connectable undirected advertising (ADV_IND)
     uint8_t own_addr_type = 0; // Public Device Address
     uint8_t peer_addr_type = 0; // Public Device Address
@@ -325,9 +325,9 @@ void app_main()
 
     ESP_LOGI(TAG, "on va lancer bleAdvtTask");
     bleAdvtTask();
-    ESP_LOGI(TAG, "on advertise 10 secondes");
-    vTaskDelay(10000 / portTICK_PERIOD_MS);
-    ESP_LOGI(TAG, "fin... on se revoit après un dodo bien mérité...");
+    ESP_LOGI(TAG, "on advertise 60 secondes");
+    vTaskDelay(60000 / portTICK_PERIOD_MS);
+    ESP_LOGI(TAG, "fin... on se revoit après un dodo de 5s bien mérité...");
     esp_sleep_enable_timer_wakeup(5 * 1000000);
 	esp_deep_sleep_start();
 }
