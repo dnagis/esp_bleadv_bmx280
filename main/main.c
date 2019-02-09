@@ -23,6 +23,8 @@ static const char *TAG = "VVNX";
 uint8_t temp_intpart = 99; //valeur par défaut -> 63 en hex
 uint8_t temp_decpart = 99; //valeur par défaut -> 63 en hex
 bool temp_pos = true; //si la température est positive true si neg false
+uint8_t hum_intpart = 88; //valeur par défaut
+uint8_t hum_decpart = 88; //valeur par défaut
 
 /*
  * Bluetooth
@@ -200,9 +202,11 @@ static void hci_cmd_send_ble_set_adv_data(void)
     if (temp_pos == true) adv_data[4] = 1; else adv_data[4] = 0;
     adv_data[5] = temp_intpart; //arrive en hexa de l'autre côté (hexa c'est la forme d'affichage, en fait c'est un int tout le long)
     adv_data[6] = temp_decpart; //arrive en hexa de l'autre côté (hexa c'est la forme d'affichage, en fait c'est un int tout le long)
-    adv_data_len = 7;
+    adv_data[7] = hum_intpart; 
+    adv_data[8] = hum_decpart; 
+    adv_data_len = 9;
     
-    printf("Les champs température que l'on va advertiser ---------->temp_pos:%i et temp: %i.%i\n",adv_data[4], temp_intpart, temp_decpart);
+    printf("On va advertiser temp_pos:%i, temp: %i.%i et hum:%i.%i\n",adv_data[4], temp_intpart, temp_decpart, hum_intpart, hum_decpart);
 
     
     uint16_t sz = make_cmd_ble_set_adv_data(hci_cmd_buf, adv_data_len, (uint8_t *)adv_data);
@@ -249,7 +253,7 @@ static bmx280_config_t bmx280_config[2];
 
 static void env_sensor_callback(env_data_t* env_data) {
 	if (env_data->sensor_idx <= 1) {
-		ESP_LOGI(TAG,"env (%d): temp : %.2f C, pressure: %.2f hPa, humidity: %.2f %%", env_data->sensor_idx, env_data->temp, env_data->pressure, env_data->humidity);
+		ESP_LOGI(TAG,"env (%d): temp : %.2f C, pressure: %.2f hPa, Humidity: %.2f %%", env_data->sensor_idx, env_data->temp, env_data->pressure, env_data->humidity);
 		env_data_record_t* r = last_env_data + env_data->sensor_idx;
 		r->timestamp = oap_epoch_sec();
 		memcpy(&last_env_data->env_data, env_data, sizeof(env_data_t));
@@ -262,6 +266,8 @@ static void env_sensor_callback(env_data_t* env_data) {
 		if (env_data->temp < 0) temp_pos = false;
 		temp_intpart = (int)fabs(env_data->temp); //fabs = valeur absolue d'un double (gestion des temps negs)
 		temp_decpart = ((int)(fabs(env_data->temp)*100)%100);
+		hum_intpart = (int)fabs(env_data->humidity);
+		hum_decpart = ((int)(fabs(env_data->humidity)*100)%100);
 		
 	} else {
 		ESP_LOGE(TAG, "env (%d) - invalid sensor", env_data->sensor_idx);
