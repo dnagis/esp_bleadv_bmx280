@@ -198,7 +198,9 @@ static void hci_cmd_send_ble_set_adv_data(void)
     }
     adv_data_len = 5 + name_len;*/
     
-    adv_data[3] = 3; //taille de la partie température: un byte pour temp_pos (true si temperature positive false otherwise, et partie avant virgule, et partie après virgule
+    
+    //ATTENTION SI adv_data[3] --> PAS LA BONNE TAILLE DE DATA --> ANDROID LE SORT PAS++++
+    adv_data[3] = 5; //taille de la partie température: un byte pour temp_pos (true si temperature positive false otherwise, et partie avant virgule, et partie après virgule
     if (temp_pos == true) adv_data[4] = 1; else adv_data[4] = 0;
     adv_data[5] = temp_intpart; //arrive en hexa de l'autre côté (hexa c'est la forme d'affichage, en fait c'est un int tout le long)
     adv_data[6] = temp_decpart; //arrive en hexa de l'autre côté (hexa c'est la forme d'affichage, en fait c'est un int tout le long)
